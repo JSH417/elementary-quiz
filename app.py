@@ -22,6 +22,7 @@ from math_ai_engine import (
 
 # Chongron & Changche module
 from curriculum_study_engine import render_chongron_master_ui
+from content_framework_engine import render_content_framework_ui
 
 st.set_page_config(
     page_title="초등 임용 스마트 문제은행 & AI 무한 생성기",
@@ -160,16 +161,29 @@ with st.sidebar:
     subject_choice = st.radio(
         "출제 및 분석 과목:",
         [
+            "📋 2022 내용체계표 [상·중·하 마스터] (국·도·실·음·미·체·통)",
             "📑 2022 개정 총론 & 창체 (빈칸 암기/마스킹/퀴즈)",
             "📐 초등 수학 (1682p 각론완성)",
             "🎵 초등 음악 (498p 각론완성)"
         ],
         index=0
     )
+    is_naepyo = "내용체계표" in subject_choice
     is_chongron = "총론" in subject_choice
     is_math = "수학" in subject_choice
     
-    if is_chongron:
+    if is_naepyo:
+        st.markdown("---")
+        st.markdown("### 📋 내용체계표 단계별 마스터")
+        st.info("💡 **상 · 중 · 하 3단계 난이도**와 **마스킹 모드 / 빈칸 문제 풀기 / 정답 보기 / 랜덤 모의고사 / 통합 검색**을 자유롭게 선택할 수 있습니다.")
+        st.markdown("---")
+        st.markdown("**📌 데이터베이스 탑재 현황:**")
+        st.caption("• 2022 개정 초등 7개 전과목 내용체계표")
+        st.caption("• 국어, 도덕, 실과, 음악, 미술, 체육, 통합교과")
+        st.caption("• 35개 영역 629개 전체 조항 전수 수록")
+        st.caption("• 상(통인출) / 중(복합) / 하(기초) 3단계")
+        menu = None
+    elif is_chongron:
         st.markdown("---")
         st.markdown("### 📑 총론 & 창체 빈칸 마스터")
         st.info("💡 우측 상단 5대 탭에서 **마스킹 모드 / 빈칸 문제 풀기 / 정답 보기 / 실전 모의고사 / 통합 검색**을 자유롭게 선택하여 학습할 수 있습니다.")
@@ -240,7 +254,9 @@ with st.sidebar:
 
 
 # Main Body Dispatch
-if is_chongron:
+if is_naepyo:
+    render_content_framework_ui()
+elif is_chongron:
     render_chongron_master_ui()
 else:
     # Session State for generated quiz

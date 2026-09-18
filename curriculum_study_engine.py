@@ -299,7 +299,6 @@ def render_chongron_master_ui():
         if btn_submit:
             correct_count = 0
             results = []
-            
             for k, info in user_responses.items():
                 u_val = info["user_val"]
                 c_val = info["correct_val"]
@@ -315,29 +314,53 @@ def render_chongron_master_ui():
                 })
 
             score_pct = (correct_count / total_sec_blanks * 100) if total_sec_blanks > 0 else 0
-            
+            st.session_state[f"has_graded_cse_{form_key}"] = True
+            st.session_state[f"score_cse_{form_key}"] = (correct_count, total_sec_blanks, score_pct)
+            st.session_state[f"results_cse_{form_key}"] = results
+
+        if st.session_state.get(f"has_graded_cse_{form_key}", False):
+            correct_count, total_sec_blanks, score_pct = st.session_state[f"score_cse_{form_key}"]
+            results = st.session_state[f"results_cse_{form_key}"]
+            st.markdown("---")
             if score_pct == 100:
                 st.balloons()
                 st.success(f"🎉 **완벽합니다! 만점입니다!** ({correct_count} / {total_sec_blanks}개 정답, 정답률 100%)")
             elif score_pct >= 70:
                 st.success(f"👏 **우수한 성적입니다!** ({correct_count} / {total_sec_blanks}개 정답, 정답률 {score_pct:.1f}%)")
             else:
-                st.warning(f"✍️ **복습이 필요합니다.** ({correct_count} / {total_sec_blanks}개 정답, 정답률 {score_pct:.1f}%)")
+                st.warning(f"✍️ **채점 완료:** {correct_count} / {total_sec_blanks}개 정답 (정답률 {score_pct:.1f}%)")
 
-            st.markdown("#### 📊 채점 결과 세부 분석")
-            for r in results:
-                status_icon = "✅ 정답" if r["is_correct"] else "❌ 오답"
-                bg_color = "#F0FDF4" if r["is_correct"] else "#FEF2F2"
-                border_color = "#86EFAC" if r["is_correct"] else "#FCA5A5"
-                st.markdown(f"""
-                <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;">
-                    <b>{r['b_num']}</b> [{r['sub_title']}] : {status_icon}<br>
-                    <span style="font-size: 0.9rem;">
-                    • 내 입력: <code>{r['user_val']}</code> &nbsp;|&nbsp; 
-                    • 정답: <strong style="color: #15803D;">{r['correct_val']}</strong>
-                    </span>
-                </div>
-                """, unsafe_allow_html=True)
+            c_cse_view, c_cse_reset = st.columns([2, 1])
+            is_viewing_cse = st.session_state.get(f"show_detail_cse_{form_key}", False)
+            with c_cse_view:
+                lbl = "🙈 채점 결과 가리기" if is_viewing_cse else "🔍 세부 채점 결과 및 정답 확인하기 (버튼 클릭)"
+                if st.button(lbl, key=f"btn_cse_toggle_{form_key}", use_container_width=True, type="secondary"):
+                    st.session_state[f"show_detail_cse_{form_key}"] = not is_viewing_cse
+                    st.rerun()
+            with c_cse_reset:
+                if st.button("🔄 채점 닫기 / 다시 풀기", key=f"btn_cse_reset_{form_key}", use_container_width=True):
+                    st.session_state[f"has_graded_cse_{form_key}"] = False
+                    st.session_state[f"show_detail_cse_{form_key}"] = False
+                    st.rerun()
+
+            if st.session_state.get(f"show_detail_cse_{form_key}", False):
+                st.markdown("#### 📊 채점 결과 세부 분석 및 정답 대조표")
+                for r in results:
+                    status_icon = "✅ 정답" if r["is_correct"] else "❌ 오답"
+                    bg_color = "#F0FDF4" if r["is_correct"] else "#FEF2F2"
+                    border_color = "#86EFAC" if r["is_correct"] else "#FCA5A5"
+                    st.markdown(f"""
+                    <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;">
+                        <b>{r['b_num']}</b> [{r['sub_title']}] : {status_icon}<br>
+                        <span style="font-size: 0.9rem;">
+                        • 내 입력: <code>{r['user_val']}</code> &nbsp;|&nbsp; 
+                        • 정답: <strong style="color: #15803D;">{r['correct_val']}</strong>
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.caption("🔒 바로 아래 정답이 노출되지 않도록 가려두었습니다. 확인하시려면 위 **[🔍 세부 채점 결과 및 정답 확인하기]** 버튼을 눌러주세요.")
+
 
     # =========================================================================
     # TAB 3: 정답 보기 (원문 정독 & 암기 모드)
