@@ -190,7 +190,8 @@ def render_chongron_master_ui():
                 continue
             filtered_sections.append(sec)
 
-        sec_titles = [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in filtered_sections]
+        ALL_OPTION = "🌟 [전범위 올인원] 26페이지 전편 연속 학습 (총 363개 빈칸 풀코스)"
+        sec_titles = [ALL_OPTION] + [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in filtered_sections]
         with f_col2:
             selected_title = st.selectbox("학습할 페이지 / 단원 선택", sec_titles, key="mask_sec_select")
             
@@ -198,33 +199,38 @@ def render_chongron_master_ui():
             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             reveal_all = st.checkbox("👁️ 전체 정답 펼치기", value=False, key="mask_reveal_all")
 
-        selected_sec = next((s for s in filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == selected_title), filtered_sections[0])
+        is_all_mode = (selected_title == ALL_OPTION)
+        target_sections = filtered_sections if is_all_mode else [next((s for s in filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == selected_title), filtered_sections[0])]
 
         st.markdown("---")
-        st.markdown(f"#### 📌 [P.{selected_sec['page']}] {selected_sec['chapter']} > {selected_sec['title']}")
+        if is_all_mode:
+            st.info(f"🌟 **전범위 올인원 연속 학습 모드** — 총 {len(target_sections)}개 섹션(363개 빈칸)이 한 화면에 연속으로 펼쳐집니다. 스크롤하며 학습하세요!")
 
-        for idx, item in enumerate(selected_sec.get("items", [])):
-            sub_t = item.get("sub_title", f"문항 {idx+1}")
-            blanks = item.get("blanks", {})
-            raw_text = item.get("text", "")
-            
-            with st.container():
-                st.markdown(f"**🔹 {sub_t}** ({len(blanks)}개 빈칸)")
-                
-                masked_html = render_masking_text(raw_text, blanks, show_all=reveal_all, item_id=item.get("id", f"item_{idx}"))
-                st.markdown(f"""
-                <div style="background-color: #F8FAFC; border-left: 4px solid #3B82F6; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.98rem; line-height: 1.9;">
-                    {masked_html}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                with st.expander(f"📋 '{sub_t}' 정답 일람표 보기"):
-                    ans_cols = st.columns(min(len(blanks), 4) if blanks else 1)
-                    for b_idx, (b_num, b_ans) in enumerate(blanks.items()):
-                        with ans_cols[b_idx % len(ans_cols)]:
-                            st.info(f"**{b_num}** : {b_ans}")
+        for selected_sec in target_sections:
+            st.markdown(f"#### 📌 [P.{selected_sec['page']}] {selected_sec['chapter']} > {selected_sec['title']}")
 
-    # =========================================================================
+            for idx, item in enumerate(selected_sec.get("items", [])):
+                sub_t = item.get("sub_title", f"문항 {idx+1}")
+                blanks = item.get("blanks", {})
+                raw_text = item.get("text", "")
+                
+                with st.container():
+                    st.markdown(f"**🔹 {sub_t}** ({len(blanks)}개 빈칸)")
+                    
+                    masked_html = render_masking_text(raw_text, blanks, show_all=reveal_all, item_id=item.get("id", f"item_{idx}"))
+                    st.markdown(f"""
+                    <div style="background-color: #F8FAFC; border-left: 4px solid #3B82F6; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.98rem; line-height: 1.9;">
+                        {masked_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    with st.expander(f"📋 '{sub_t}' 정답 일람표 보기"):
+                        ans_cols = st.columns(min(len(blanks), 4) if blanks else 1)
+                        for b_idx, (b_num, b_ans) in enumerate(blanks.items()):
+                            with ans_cols[b_idx % len(ans_cols)]:
+                                st.info(f"**{b_num}** : {b_ans}")
+    
+        # =========================================================================
     # TAB 2: 빈칸 문제 풀기 (실전 채점 모드)
     # =========================================================================
     with mode_tab2:
@@ -247,53 +253,58 @@ def render_chongron_master_ui():
                 continue
             q_filtered_sections.append(sec)
 
-        q_sec_titles = [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in q_filtered_sections]
+        ALL_QUIZ_OPTION = "🌟 [전범위 올인원] 26페이지 전편 연속 시험 (총 363개 빈칸 풀코스)"
+        q_sec_titles = [ALL_QUIZ_OPTION] + [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in q_filtered_sections]
         with q_col2:
             q_selected_title = st.selectbox("문제 풀 단원 선택", q_sec_titles, key="quiz_sec_select")
 
-        q_selected_sec = next((s for s in q_filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == q_selected_title), q_filtered_sections[0])
-        
-        st.markdown("---")
-        st.markdown(f"#### ✍️ [P.{q_selected_sec['page']}] {q_selected_sec['chapter']} > {q_selected_sec['title']}")
+        q_is_all_mode = (q_selected_title == ALL_QUIZ_OPTION)
+        q_target_sections = q_filtered_sections if q_is_all_mode else [next((s for s in q_filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == q_selected_title), q_filtered_sections[0])]
 
-        form_key = f"form_quiz_{q_selected_sec['page']}_{hash(q_selected_sec['title'])}"
+        st.markdown("---")
+        if q_is_all_mode:
+            st.info("🌟 **전범위 올인원 연속 시험 모드** — 26페이지 전편 문제가 한 페이지에 모두 표시됩니다. 단원 이동 없이 한 번에 풀고 맨 아래에서 전체 채점하세요!")
+
+        form_key = f"form_quiz_{'all' if q_is_all_mode else q_target_sections[0]['page']}_{hash(q_selected_title)}"
         with st.form(key=form_key):
             user_responses = {}
             total_sec_blanks = 0
 
-            for idx, item in enumerate(q_selected_sec.get("items", [])):
-                sub_t = item.get("sub_title", f"문항 {idx+1}")
-                blanks = item.get("blanks", {})
-                raw_text = item.get("text", "")
-                item_id = item.get("id", f"it_{idx}")
-                
-                st.markdown(f"##### 📌 {sub_t}")
-                
-                display_text = raw_text
-                for b_num in blanks.keys():
-                    pattern = re.compile(rf"\(\s*{re.escape(b_num)}\s*\)")
-                    replacement = f"<b style='color:#1E40AF; background:#DBEAFE; padding:1px 6px; border-radius:4px;'>({b_num} _______)</b>"
-                    display_text = pattern.sub(replacement, display_text)
+            for q_selected_sec in q_target_sections:
+                st.markdown(f"#### ✍️ [P.{q_selected_sec['page']}] {q_selected_sec['chapter']} > {q_selected_sec['title']}")
+                for idx, item in enumerate(q_selected_sec.get("items", [])):
+                    sub_t = item.get("sub_title", f"문항 {idx+1}")
+                    blanks = item.get("blanks", {})
+                    raw_text = item.get("text", "")
+                    item_id = item.get("id", f"it_{idx}")
                     
-                st.markdown(f"""
-                <div style="background-color: #F1F5F9; border-left: 4px solid #0284C7; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.95rem; line-height: 1.8;">
-                    {display_text}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                cols = st.columns(min(len(blanks), 4) if blanks else 1)
-                for b_idx, (b_num, b_ans) in enumerate(blanks.items()):
-                    total_sec_blanks += 1
-                    input_key = f"ans_{item_id}_{b_num}"
-                    with cols[b_idx % len(cols)]:
-                        user_responses[input_key] = {
-                            "user_val": st.text_input(f"{b_num} 빈칸 답안:", key=input_key, placeholder="정답 입력"),
-                            "correct_val": b_ans,
-                            "b_num": b_num,
-                            "sub_title": sub_t
-                        }
-                st.markdown("<hr style='margin: 10px 0; border: none; border-top: 1px dashed #CBD5E1;'>", unsafe_allow_html=True)
-
+                    st.markdown(f"##### 📌 {sub_t}")
+                    
+                    display_text = raw_text
+                    for b_num in blanks.keys():
+                        pattern = re.compile(rf"\(\s*{re.escape(b_num)}\s*\)")
+                        replacement = f"<b style='color:#1E40AF; background:#DBEAFE; padding:1px 6px; border-radius:4px;'>({b_num} _______)</b>"
+                        display_text = pattern.sub(replacement, display_text)
+                        
+                    st.markdown(f"""
+                    <div style="background-color: #F1F5F9; border-left: 4px solid #0284C7; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.95rem; line-height: 1.8;">
+                        {display_text}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    cols = st.columns(min(len(blanks), 4) if blanks else 1)
+                    for b_idx, (b_num, b_ans) in enumerate(blanks.items()):
+                        total_sec_blanks += 1
+                        input_key = f"ans_{item_id}_{b_num}"
+                        with cols[b_idx % len(cols)]:
+                            user_responses[input_key] = {
+                                "user_val": st.text_input(f"{b_num} 빈칸 답안:", key=input_key, placeholder="정답 입력"),
+                                "correct_val": b_ans,
+                                "b_num": b_num,
+                                "sub_title": sub_t
+                            }
+                    st.markdown("<hr style='margin: 10px 0; border: none; border-top: 1px dashed #CBD5E1;'>", unsafe_allow_html=True)
+    
             btn_submit = st.form_submit_button("📝 답안 제출 및 자동 채점하기", type="primary", use_container_width=True)
 
         if btn_submit:
@@ -385,33 +396,38 @@ def render_chongron_master_ui():
                 continue
             ans_filtered_sections.append(sec)
 
-        ans_sec_titles = [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in ans_filtered_sections]
+        ALL_ANS_OPTION = "🌟 [전범위 올인원] 26페이지 전편 원문 연속 정독 (완전판 원문집)"
+        ans_sec_titles = [ALL_ANS_OPTION] + [f"P.{s['page']} [{s['subject']}] {s['title']}" for s in ans_filtered_sections]
         with ans_f2:
             ans_selected_title = st.selectbox("정독할 단원 선택", ans_sec_titles, key="ans_sec_select")
 
-        ans_selected_sec = next((s for s in ans_filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == ans_selected_title), ans_filtered_sections[0])
+        ans_is_all_mode = (ans_selected_title == ALL_ANS_OPTION)
+        ans_target_sections = ans_filtered_sections if ans_is_all_mode else [next((s for s in ans_filtered_sections if f"P.{s['page']} [{s['subject']}] {s['title']}" == ans_selected_title), ans_filtered_sections[0])]
 
         st.markdown("---")
-        st.markdown(f"#### 📜 [P.{ans_selected_sec['page']}] {ans_selected_sec['chapter']} > {ans_selected_sec['title']}")
+        if ans_is_all_mode:
+            st.info("🌟 **전범위 올인원 연속 정독 모드** — 26페이지 전편 완전판 고시 원문이 한눈에 이어집니다.")
 
-        for idx, item in enumerate(ans_selected_sec.get("items", [])):
-            sub_t = item.get("sub_title", f"문항 {idx+1}")
-            blanks = item.get("blanks", {})
-            raw_text = item.get("text", "")
-            
-            st.markdown(f"##### 📌 {sub_t}")
-            full_ans_html = render_full_answer_text(raw_text, blanks)
-            
-            st.markdown(f"""
-            <div style="background-color: #FEFCE8; border-left: 4px solid #EAB308; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.98rem; line-height: 2.0;">
-                {full_ans_html}
-            </div>
-            """, unsafe_allow_html=True)
-
-            with st.expander(f"📋 {sub_t} 정답 키워드 요약 리스트"):
-                st.table([{"빈칸 번호": k, "핵심 정답 용어": v} for k, v in blanks.items()])
-
-    # =========================================================================
+        for ans_selected_sec in ans_target_sections:
+            st.markdown(f"#### 📜 [P.{ans_selected_sec['page']}] {ans_selected_sec['chapter']} > {ans_selected_sec['title']}")
+            for idx, item in enumerate(ans_selected_sec.get("items", [])):
+                sub_t = item.get("sub_title", f"문항 {idx+1}")
+                blanks = item.get("blanks", {})
+                raw_text = item.get("text", "")
+                
+                st.markdown(f"##### 📌 {sub_t}")
+                full_ans_html = render_full_answer_text(raw_text, blanks)
+                
+                st.markdown(f"""
+                <div style="background-color: #FEFCE8; border-left: 4px solid #EAB308; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 0.98rem; line-height: 2.0;">
+                    {full_ans_html}
+                </div>
+                """, unsafe_allow_html=True)
+    
+                with st.expander(f"📋 {sub_t} 정답 키워드 요약 리스트"):
+                    st.table([{"빈칸 번호": k, "핵심 정답 용어": v} for k, v in blanks.items()])
+    
+        # =========================================================================
     # TAB 4: 실전 랜덤 모의고사 (10~30제)
     # =========================================================================
     with mode_tab4:
