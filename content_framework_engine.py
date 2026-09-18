@@ -195,7 +195,8 @@ def render_content_framework_ui():
             sel_subject = st.selectbox("과목 선택", ["전체"] + all_subjects, key="mask_naepyo_subj")
 
         filtered_domains = [d for d in data if sel_subject == "전체" or d["subject"] == sel_subject]
-        domain_titles = [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in filtered_domains]
+        ALL_DOM_OPTION = "🌟 [전범위 올인원] 선택 과목 전체 영역 연속 학습 (풀코스)"
+        domain_titles = [ALL_DOM_OPTION] + [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in filtered_domains]
         with c_dom:
             sel_domain_title = st.selectbox("학습할 영역 선택", domain_titles, key="mask_naepyo_domain")
 
@@ -203,52 +204,55 @@ def render_content_framework_ui():
             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             reveal_all = st.checkbox("👁️ 전체 정답 열기", value=False, key="mask_naepyo_rev_all")
 
-        # Get active domain
-        active_domain = next(
+        is_all_mode = (sel_domain_title == ALL_DOM_OPTION)
+        target_domains = filtered_domains if is_all_mode else [next(
             (d for d in filtered_domains if f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" == sel_domain_title),
             filtered_domains[0]
-        )
+        )]
 
-        st.markdown(f"#### 📌 [{active_domain['subject']}] {active_domain['domain_name']}")
+        st.markdown("---")
+        if is_all_mode:
+            st.info(f"🌟 **전범위 올인원 연속 학습 모드** — 총 {len(target_domains)}개 영역({sum(len(d.get('items',[])) for d in target_domains)}개 항목)이 한 화면에 연속으로 펼쳐집니다.")
 
-        # Group by category (지식·이해 / 과정·기능 / 가치·태도)
         categories = ["지식·이해", "과정·기능", "가치·태도"]
-        for cat in categories:
-            cat_items = [it for it in active_domain.get("items", []) if it.get("category") == cat]
-            if not cat_items:
-                continue
+        for active_domain in target_domains:
+            st.markdown(f"#### 📌 [{active_domain['subject']}] {active_domain['domain_name']}")
+            for cat in categories:
+                cat_items = [it for it in active_domain.get("items", []) if it.get("category") == cat]
+                if not cat_items:
+                    continue
 
-            st.markdown(f"##### 🏷️ {cat} ({len(cat_items)}개 항목)")
+                st.markdown(f"##### 🏷️ {cat} ({len(cat_items)}개 항목)")
             
-            for it in cat_items:
-                if diff_level == "ha":
-                    target_text = it.get("text_ha", "")
-                    target_blanks = it.get("blanks_ha", {})
-                elif diff_level == "jung":
-                    target_text = it.get("text_jung", "")
-                    target_blanks = it.get("blanks_jung", {})
-                else:
-                    target_text = it.get("full_text", "")
-                    target_blanks = {"①": it.get("full_text", "")}
-
-                if diff_level == "sang":
-                    if reveal_all:
-                        display_html = f"<span style='background:#DCFCE7; color:#14532D; font-weight:800; padding:3px 8px; border-radius:6px; border:1px solid #86EFAC;'>{it.get('full_text')}</span>"
+                for it in cat_items:
+                    if diff_level == "ha":
+                        target_text = it.get("text_ha", "")
+                        target_blanks = it.get("blanks_ha", {})
+                    elif diff_level == "jung":
+                        target_text = it.get("text_jung", "")
+                        target_blanks = it.get("blanks_jung", {})
                     else:
-                        display_html = (
-                            f"<details style='display:inline-block; vertical-align:middle; margin:2px;'>"
-                            f"<summary style='cursor:pointer; background:#EFF6FF; color:#1D4ED8; border:1.5px solid #93C5FD; border-radius:14px; padding:3px 12px; font-size:0.88rem; font-weight:700;'>[❓ 문장 통인출 확인]</summary>"
-                            f"<span style='background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; border-radius:6px; padding:3px 8px; font-weight:800; margin-left:6px;'>{it.get('full_text')}</span>"
-                            f"</details>"
-                        )
-                else:
-                    display_html = render_masked_text(target_text, target_blanks, show_all=reveal_all)
+                        target_text = it.get("full_text", "")
+                        target_blanks = {"①": it.get("full_text", "")}
 
-                st.markdown(f"""
-                <div style="background-color: #F8FAFC; border-left: 4px solid #10B981; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 8px; font-size: 0.95rem; line-height: 1.8;">
-                    <b>{it['item_num']}.</b> {display_html}
-                </div>
-                """, unsafe_allow_html=True)
+                    if diff_level == "sang":
+                        if reveal_all:
+                            display_html = f"<span style='background:#DCFCE7; color:#14532D; font-weight:800; padding:3px 8px; border-radius:6px; border:1px solid #86EFAC;'>{it.get('full_text')}</span>"
+                        else:
+                            display_html = (
+                                f"<details style='display:inline-block; vertical-align:middle; margin:2px;'>"
+                                f"<summary style='cursor:pointer; background:#EFF6FF; color:#1D4ED8; border:1.5px solid #93C5FD; border-radius:14px; padding:3px 12px; font-size:0.88rem; font-weight:700;'>[❓ 문장 통인출 확인]</summary>"
+                                f"<span style='background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; border-radius:6px; padding:3px 8px; font-weight:800; margin-left:6px;'>{it.get('full_text')}</span>"
+                                f"</details>"
+                            )
+                    else:
+                        display_html = render_masked_text(target_text, target_blanks, show_all=reveal_all)
+
+                    st.markdown(f"""
+                    <div style="background-color: #F8FAFC; border-left: 4px solid #10B981; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 8px; font-size: 0.95rem; line-height: 1.8;">
+                        <b>{it['item_num']}.</b> {display_html}
+                    </div>
+                    """, unsafe_allow_html=True)
 
     # =========================================================================
     # TAB 2: 빈칸 문제 풀기 (실전 자동 채점)
@@ -262,82 +266,88 @@ def render_content_framework_ui():
             q_subject = st.selectbox("문제 풀 과목 선택", ["전체"] + all_subjects, key="quiz_naepyo_subj")
 
         q_domains = [d for d in data if q_subject == "전체" or d["subject"] == q_subject]
-        q_titles = [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in q_domains]
+        ALL_QUIZ_DOM_OPTION = "🌟 [전범위 올인원] 선택 과목 전체 영역 연속 시험 (풀코스)"
+        q_titles = [ALL_QUIZ_DOM_OPTION] + [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in q_domains]
         with qc_dom:
             q_domain_title = st.selectbox("문제 풀 영역 선택", q_titles, key="quiz_naepyo_dom")
 
-        q_active_domain = next(
+        q_is_all_mode = (q_domain_title == ALL_QUIZ_DOM_OPTION)
+        q_target_domains = q_domains if q_is_all_mode else [next(
             (d for d in q_domains if f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" == q_domain_title),
             q_domains[0]
-        )
+        )]
 
-        st.markdown(f"#### ✍️ [{q_active_domain['subject']}] {q_active_domain['domain_name']} ({difficulty.split(':')[0].strip()})")
+        st.markdown("---")
+        if q_is_all_mode:
+            st.info(f"🌟 **전범위 올인원 연속 시험 모드** — 선택하신 범위의 모든 영역({sum(len(d.get('items',[])) for d in q_target_domains)}개 항목) 문제가 한 페이지에 모두 표시됩니다. 단원 이동 없이 한 번에 풀고 맨 아래에서 전체 채점하세요!")
 
-        form_key = f"quiz_form_{q_active_domain['domain_id']}_{diff_level}"
+        form_key = f"quiz_form_{'all' if q_is_all_mode else q_target_domains[0]['domain_id']}_{diff_level}_{hash(q_domain_title)}"
         with st.form(key=form_key):
             user_inputs = {}
             total_blanks_count = 0
 
-            for cat in ["지식·이해", "과정·기능", "가치·태도"]:
-                c_items = [it for it in q_active_domain.get("items", []) if it.get("category") == cat]
-                if not c_items:
-                    continue
+            for q_active_domain in q_target_domains:
+                st.markdown(f"#### ✍️ [{q_active_domain['subject']}] {q_active_domain['domain_name']}")
+                for cat in ["지식·이해", "과정·기능", "가치·태도"]:
+                    c_items = [it for it in q_active_domain.get("items", []) if it.get("category") == cat]
+                    if not c_items:
+                        continue
 
-                st.markdown(f"##### 📌 {cat}")
+                    st.markdown(f"##### 📌 {cat}")
                 
-                for it in c_items:
-                    it_id = it["item_id"]
+                    for it in c_items:
+                        it_id = it["item_id"]
                     
-                    if diff_level == "ha":
-                        display_text = it.get("text_ha", "")
-                        blanks_map = it.get("blanks_ha", {})
-                    elif diff_level == "jung":
-                        display_text = it.get("text_jung", "")
-                        blanks_map = it.get("blanks_jung", {})
-                    else:
-                        display_text = "__________________________________________________"
-                        blanks_map = {"통문장": it.get("full_text", "")}
+                        if diff_level == "ha":
+                            display_text = it.get("text_ha", "")
+                            blanks_map = it.get("blanks_ha", {})
+                        elif diff_level == "jung":
+                            display_text = it.get("text_jung", "")
+                            blanks_map = it.get("blanks_jung", {})
+                        else:
+                            display_text = "__________________________________________________"
+                            blanks_map = {"통문장": it.get("full_text", "")}
 
-                    # Render blank placeholder
-                    if diff_level != "sang":
-                        b_idx_c = 0
-                        def placeholder_replacer(match):
-                            nonlocal b_idx_c
-                            b_idx_c += 1
-                            return f"<b style='color:#047857; background:#D1FAE5; padding:1px 6px; border-radius:4px;'>[빈칸 {b_idx_c} ______]</b>"
-                        prompt_html = re.sub(r'\(\s*_+?\s*\)', placeholder_replacer, display_text)
-                    else:
-                        prompt_html = "<b style='color:#DC2626;'>[100% 백지 통인출] 공식 원문 문장을 처음부터 끝까지 작성하세요.</b>"
+                        # Render blank placeholder
+                        if diff_level != "sang":
+                            b_idx_c = 0
+                            def placeholder_replacer(match):
+                                nonlocal b_idx_c
+                                b_idx_c += 1
+                                return f"<b style='color:#047857; background:#D1FAE5; padding:1px 6px; border-radius:4px;'>[빈칸 {b_idx_c} ______]</b>"
+                            prompt_html = re.sub(r'\(\s*_+?\s*\)', placeholder_replacer, display_text)
+                        else:
+                            prompt_html = "<b style='color:#DC2626;'>[100% 백지 통인출] 공식 원문 문장을 처음부터 끝까지 작성하세요.</b>"
 
-                    st.markdown(f"""
-                    <div style="background-color: #F1F5F9; border-left: 4px solid #059669; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 0.93rem; line-height: 1.7;">
-                        <b>{it['item_num']}.</b> {prompt_html}
-                    </div>
-                    """, unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div style="background-color: #F1F5F9; border-left: 4px solid #059669; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 0.93rem; line-height: 1.7;">
+                            <b>{it['item_num']}.</b> {prompt_html}
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                    # Input fields
-                    if diff_level == "sang":
-                        total_blanks_count += 1
-                        inp_k = f"in_{it_id}_sang"
-                        user_inputs[inp_k] = {
-                            "user_val": st.text_input(f"{it['item_num']}번 전체 문장 입력:", key=inp_k, placeholder="공식 원문 문장 입력"),
-                            "correct_val": it.get("full_text", ""),
-                            "label": f"{it['item_num']}번 통문장",
-                            "is_sang": True
-                        }
-                    else:
-                        cols = st.columns(min(len(blanks_map), 4) if blanks_map else 1)
-                        for b_i, (b_k, b_ans) in enumerate(blanks_map.items()):
+                        # Input fields
+                        if diff_level == "sang":
                             total_blanks_count += 1
-                            inp_k = f"in_{it_id}_{b_k}"
-                            with cols[b_i % len(cols)]:
-                                user_inputs[inp_k] = {
-                                    "user_val": st.text_input(f"{it['item_num']}번 빈칸 {b_i+1}:", key=inp_k, placeholder="정답 단어 입력"),
-                                    "correct_val": b_ans,
-                                    "label": f"{it['item_num']}번 빈칸 {b_i+1}",
-                                    "is_sang": False
-                                }
-                    st.markdown("<hr style='margin: 6px 0; border: none; border-top: 1px dashed #CBD5E1;'>", unsafe_allow_html=True)
+                            inp_k = f"in_{it_id}_sang"
+                            user_inputs[inp_k] = {
+                                "user_val": st.text_input(f"{it['item_num']}번 전체 문장 입력:", key=inp_k, placeholder="공식 원문 문장 입력"),
+                                "correct_val": it.get("full_text", ""),
+                                "label": f"{it['item_num']}번 통문장",
+                                "is_sang": True
+                            }
+                        else:
+                            cols = st.columns(min(len(blanks_map), 4) if blanks_map else 1)
+                            for b_i, (b_k, b_ans) in enumerate(blanks_map.items()):
+                                total_blanks_count += 1
+                                inp_k = f"in_{it_id}_{b_k}"
+                                with cols[b_i % len(cols)]:
+                                    user_inputs[inp_k] = {
+                                        "user_val": st.text_input(f"{it['item_num']}번 빈칸 {b_i+1}:", key=inp_k, placeholder="정답 단어 입력"),
+                                        "correct_val": b_ans,
+                                        "label": f"{it['item_num']}번 빈칸 {b_i+1}",
+                                        "is_sang": False
+                                    }
+                        st.markdown("<hr style='margin: 6px 0; border: none; border-top: 1px dashed #CBD5E1;'>", unsafe_allow_html=True)
 
             btn_grade = st.form_submit_button("📝 답안 제출 및 자동 채점하기", type="primary", use_container_width=True)
 
@@ -417,45 +427,51 @@ def render_content_framework_ui():
             a_subject = st.selectbox("원문 볼 과목 선택", ["전체"] + all_subjects, key="ans_naepyo_subj")
 
         a_domains = [d for d in data if a_subject == "전체" or d["subject"] == a_subject]
-        a_titles = [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in a_domains]
+        ALL_ANS_DOM_OPTION = "🌟 [전범위 올인원] 선택 과목 전체 영역 공식 원문 대조집 (풀코스)"
+        a_titles = [ALL_ANS_DOM_OPTION] + [f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" for d in a_domains]
         with as_dom:
             a_domain_title = st.selectbox("원문 볼 영역 선택", a_titles, key="ans_naepyo_dom")
 
-        a_active_domain = next(
+        a_is_all_mode = (a_domain_title == ALL_ANS_DOM_OPTION)
+        a_target_domains = a_domains if a_is_all_mode else [next(
             (d for d in a_domains if f"[{d['subject']}] {d['domain_name']} ({len(d.get('items', []))}항목)" == a_domain_title),
             a_domains[0]
-        )
+        )]
 
-        st.markdown(f"#### 📜 [{a_active_domain['subject']}] {a_active_domain['domain_name']} 공식 원문")
+        st.markdown("---")
+        if a_is_all_mode:
+            st.info("🌟 **전범위 올인원 연속 정독 모드** — 선택하신 범위의 모든 공식 원문이 한눈에 이어집니다.")
 
-        for cat in ["지식·이해", "과정·기능", "가치·태도"]:
-            c_items = [it for it in a_active_domain.get("items", []) if it.get("category") == cat]
-            if not c_items:
-                continue
+        for a_active_domain in a_target_domains:
+            st.markdown(f"#### 📜 [{a_active_domain['subject']}] {a_active_domain['domain_name']} 공식 원문")
+            for cat in ["지식·이해", "과정·기능", "가치·태도"]:
+                c_items = [it for it in a_active_domain.get("items", []) if it.get("category") == cat]
+                if not c_items:
+                    continue
 
-            st.markdown(f"##### 🏷️ {cat}")
+                st.markdown(f"##### 🏷️ {cat}")
             
-            for it in c_items:
-                # Get blanks list from ha and jung to highlight
-                blanks_to_hl = list(it.get("blanks_ha", {}).values()) + list(it.get("blanks_jung", {}).values())
-                hl_text = render_highlighted_full_text(it.get("full_text", ""), blanks_to_hl)
+                for it in c_items:
+                    # Get blanks list from ha and jung to highlight
+                    blanks_to_hl = list(it.get("blanks_ha", {}).values()) + list(it.get("blanks_jung", {}).values())
+                    hl_text = render_highlighted_full_text(it.get("full_text", ""), blanks_to_hl)
                 
-                st.markdown(f"""
-                <div style="background-color: #FEFCE8; border-left: 4px solid #EAB308; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 6px; font-size: 0.95rem; line-height: 1.8;">
-                    <b>{it['item_num']}.</b> {hl_text}
-                </div>
-                """, unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div style="background-color: #FEFCE8; border-left: 4px solid #EAB308; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 6px; font-size: 0.95rem; line-height: 1.8;">
+                        <b>{it['item_num']}.</b> {hl_text}
+                    </div>
+                    """, unsafe_allow_html=True)
 
-            with st.expander(f"📋 {cat} 정답 키워드 요약표"):
-                st.table([
-                    {
-                        "항목 번호": f"{it['item_num']}번",
-                        "하 난이도 빈칸": ", ".join(it.get("blanks_ha", {}).values()),
-                        "중 난이도 빈칸": ", ".join(it.get("blanks_jung", {}).values()),
-                        "공식 원문": it.get("full_text", "")
-                    }
-                    for it in c_items
-                ])
+                with st.expander(f"📋 {cat} 정답 키워드 요약표"):
+                    st.table([
+                        {
+                            "항목 번호": f"{it['item_num']}번",
+                            "하 난이도 빈칸": ", ".join(it.get("blanks_ha", {}).values()),
+                            "중 난이도 빈칸": ", ".join(it.get("blanks_jung", {}).values()),
+                            "공식 원문": it.get("full_text", "")
+                        }
+                        for it in c_items
+                    ])
 
     # =========================================================================
     # TAB 4: 7개 과목 실전 랜덤 모의고사
